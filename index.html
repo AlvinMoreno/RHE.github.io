@@ -1,1436 +1,389 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>AI @ UT Austin – Visual Board</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <style>
-    :root {
-      --burnt: #bf5700;
-      --accent: #ffb347;
-      --bg: #e5e7eb;
-      --card: #fff7ed;
-      --text: #111827;
-      --muted: #4b5563;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top, #fff2e0, #e5e7eb 60%);
-      color: var(--text);
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    /* Big faint longhorn in the background */
-    body::before {
-      content: "🤘";
-      position: fixed;
-      right: -40px;
-      bottom: -60px;
-      font-size: 260px;
-      color: rgba(191, 87, 0, 0.08);
-      z-index: -1;
-      pointer-events: none;
-    }
-
-    header {
-      text-align: center;
-      padding: 24px 16px 16px;
-      position: relative;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 2.6rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #111827;
-    }
-
-    header h1 span {
-      color: var(--burnt);
-    }
-
-    header p {
-      margin: 4px 0 2px;
-      font-size: 0.95rem;
-      color: var(--muted);
-      letter-spacing: 0.13em;
-      text-transform: uppercase;
-    }
-
-    .tagline {
-      margin-top: 6px;
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      color: #374151;
-    }
-
-    .ut-logo {
-      position: absolute;
-      left: 16px;
-      top: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .ut-logo-circle {
-      width: 40px;
-      height: 40px;
-      border-radius: 999px;
-      background: var(--burnt);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #ffffff;
-      font-weight: 800;
-      font-size: 1.3rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    }
-
-    .ut-longhorn-icon {
-      line-height: 1;
-      transform: translateY(1px);
-    }
-
-    .ut-logo-text {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: #4b5563;
-    }
-
-    /* If you have an actual UT Longhorn logo image, replace the circle with:
-       <img src="ut-longhorn.png" alt="UT Austin Longhorn logo" style="height:40px;" />
-    */
-
-    .layout {
-      max-width: 1200px;
-      margin: 0 auto 32px;
-      padding: 0 16px 24px;
-      display: grid;
-      grid-template-columns: 1.3fr 1fr;
-      gap: 18px;
-    }
-
-    @media (max-width: 900px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .panel {
-      background: var(--card);
-      border-radius: 18px;
-      padding: 18px 16px 18px;
-      border: 1px solid rgba(148, 163, 184, 0.8);
-      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
-    }
-
-    .panel-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      color: var(--muted);
-    }
-
-    .dot-row {
-      display: flex;
-      gap: 4px;
-    }
-
-    .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 999px;
-      background: #d1d5db;
-    }
-
-    .dot:nth-child(1) { background: #ef4444; }
-    .dot:nth-child(2) { background: #f59e0b; }
-    .dot:nth-child(3) { background: #22c55e; }
-
-    .hint {
-      margin-top: 6px;
-      font-size: 0.75rem;
-      color: var(--muted);
-      text-align: center;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    /* MAIN WORD CLOUD CIRCLE */
-    .cloud-wrapper {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 6px 4px 10px;
-    }
-
-    .cloud-circle {
-      width: 360px;
-      height: 360px;
-      max-width: 100%;
-      border-radius: 50%;
-      background: radial-gradient(circle at top, #fff8ed, #e5e7eb 70%);
-      border: 1px dashed rgba(148, 163, 184, 0.7);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .cloud-label {
-      position: absolute;
-      inset: 40% 25%;
-      text-align: center;
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      color: var(--muted);
-      pointer-events: none;
-    }
-
-    .cloud-word {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      color: #111827;
-      transition: transform 0.18s ease, color 0.18s ease, text-shadow 0.18s ease;
-      white-space: nowrap;
-      cursor: pointer;
-      will-change: transform;
-    }
-
-    .cloud-word:hover {
-      transform: translate(-50%, -50%) scale(1.2);
-      color: var(--burnt);
-      text-shadow: 0 0 8px rgba(191, 87, 0, 0.5);
-    }
-
-    .cw-1 { font-size: 0.8rem; opacity: 0.9; }
-    .cw-2 { font-size: 1rem; font-weight: 500; }
-    .cw-3 { font-size: 1.25rem; font-weight: 700; }
-    .cw-4 { font-size: 1.6rem; font-weight: 800; color: var(--burnt); }
-
-    /* BUBBLE CLUSTER */
-    .bubbles {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .bubble {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 4px 4px;
-    }
-
-    .bubble-circle {
-      border-radius: 999px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
-      text-align: center;
-      padding: 8px;
-      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.9);
-      background: radial-gradient(circle at top, #ffedd5, #fefce8);
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-      color: #111827;
-    }
-
-    .bubble-circle span {
-      max-width: 80px;
-    }
-
-    .bubble-label {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--muted);
-    }
-
-    .bubble.big {
-      transform: translateY(-4px);
-    }
-
-    .bubble.big .bubble-circle {
-      width: 110px;
-      height: 110px;
-      font-size: 0.9rem;
-    }
-
-    .bubble.med .bubble-circle {
-      width: 90px;
-      height: 90px;
-    }
-
-    .bubble.small .bubble-circle {
-      width: 70px;
-      height: 70px;
-      font-size: 0.72rem;
-    }
-
-    .bubble-circle:hover {
-      transform: scale(1.06);
-      box-shadow: 0 0 24px rgba(191, 87, 0, 0.5);
-      background: radial-gradient(circle at top, #fed7aa, #ffffff);
-    }
-
-    /* TOGGLE BAR (NOW / FUTURE) */
-    .toggle-bar {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 6px;
-    }
-
-    .toggle-btn {
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.9);
-      padding: 4px 10px;
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      background: #fffaf3;
-      color: var(--muted);
-      cursor: pointer;
-    }
-
-    .toggle-btn.active {
-      background: linear-gradient(to right, #fb923c, var(--burnt));
-      border-color: transparent;
-      color: #ffffff;
-      font-weight: 600;
-      box-shadow: 0 0 14px rgba(191,87,0,0.6);
-    }
-
-    /* EMOJI STRIP (MOOD LINE) */
-    .mood-strip {
-      margin-top: 10px;
-      padding: 7px 9px;
-      border-radius: 999px;
-      background: #fffaf3;
-      border: 1px solid rgba(148, 163, 184, 0.8);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 6px;
-      font-size: 1.1rem;
-      box-shadow: 0 8px 20px rgba(15,23,42,0.15);
-    }
-
-    .mood-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: var(--muted);
-    }
-
-    .mood-timeline {
-      flex: 1;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 4px;
-      padding: 0 6px;
-    }
-
-    .mood-dot {
-      width: 26px;
-      height: 26px;
-      border-radius: 999px;
-      background: #fefce8;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.9);
-      cursor: pointer;
-      transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
-    }
-
-    .mood-dot.active {
-      background: radial-gradient(circle at top, #fb923c, var(--burnt));
-      box-shadow: 0 0 16px rgba(191, 87, 0, 0.9);
-      transform: scale(1.2);
-      color: #ffffff;
-    }
-
-    .mood-tag {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: var(--muted);
-      min-width: 70px;
-      text-align: right;
-    }
-
-    /* TILE GRID (USES) */
-    .tile-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .tile {
-      background: #fffaf3;
-      border-radius: 14px;
-      min-height: 70px;
-      box-shadow: 0 0 0 1px rgba(209, 213, 219, 1);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      text-align: center;
-      padding: 6px;
-      cursor: pointer;
-      transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
-      color: #111827;
-    }
-
-    .tile-emoji {
-      font-size: 1.3rem;
-      margin-bottom: 3px;
-    }
-
-    .tile:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 0 20px rgba(191, 87, 0, 0.4);
-      border-color: var(--burnt);
-      background: #ffedd5;
-    }
-
-    /* CAMPUS CIRCLE MAP */
-    .campus-circle-wrap {
-      margin-top: 10px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .campus-circle {
-      width: 260px;
-      height: 260px;
-      border-radius: 50%;
-      position: relative;
-      background: radial-gradient(circle at top, #fff7ed, #e5e7eb 80%);
-      border: 1px dashed rgba(148, 163, 184, 0.8);
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
-    }
-
-    .campus-center {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 72px;
-      height: 72px;
-      border-radius: 999px;
-      background: radial-gradient(circle at top, #fb923c, var(--burnt));
-      box-shadow: 0 0 22px rgba(191, 87, 0, 0.9);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      font-size: 1.5rem;
-      color: #ffffff;
-      text-align: center;
-    }
-
-    .campus-center-label {
-      font-size: 0.6rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-    }
-
-    .campus-node {
-      position: absolute;
-      width: 80px;
-      height: 80px;
-      border-radius: 999px;
-      background: #fffaf3;
-      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.9);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-      color: #111827;
-      text-align: center;
-      padding: 2px;
-      cursor: pointer;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
-    }
-
-    .campus-node-label {
-      font-size: 0.6rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #4b5563;
-    }
-
-    .campus-node:hover {
-      transform: translate(-50%, -50%) scale(1.06);
-      box-shadow: 0 0 18px rgba(59, 130, 246, 0.6);
-      background: #eff6ff;
-      border-color: #3b82f6;
-    }
-
-    .campus-node[data-spot="classes"] {
-      left: 50%;
-      top: 12%;
-      transform: translate(-50%, -50%);
-    }
-
-    .campus-node[data-spot="library"] {
-      left: 15%;
-      top: 72%;
-      transform: translate(-50%, -50%);
-    }
-
-    .campus-node[data-spot="advising"] {
-      left: 85%;
-      top: 72%;
-      transform: translate(-50%, -50%);
-    }
-
-    .campus-ring {
-      position: absolute;
-      inset: 12%;
-      border-radius: 50%;
-      border: 1px solid rgba(148, 163, 184, 0.55);
-      pointer-events: none;
-      opacity: 0.7;
-    }
-
-    /* BOTTOM BAND (LEGEND) */
-    .legend-band {
-      max-width: 1200px;
-      margin: 0 auto 18px;
-      padding: 10px 16px 8px;
-    }
-
-    .legend-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      font-size: 0.8rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-    }
-
-    .legend-pill {
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.8);
-      padding: 5px 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: #fffaf3;
-      box-shadow: 0 6px 16px rgba(15,23,42,0.12);
-    }
-
-    .legend-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-    }
-
-    .legend-dot.orange {
-      background: #fb923c;
-    }
-
-    .legend-dot.green {
-      background: #22c55e;
-    }
-
-    .legend-dot.blue {
-      background: #3b82f6;
-    }
-
-    .legend-dot.pink {
-      background: #ec4899;
-    }
-
-    /* COMIC + FLOW SECTION */
-    .visual-section {
-      max-width: 1200px;
-      margin: 0 auto 26px;
-      padding: 4px 16px 24px;
-    }
-
-    .comic-row {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    @media (max-width: 800px) {
-      .comic-row {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .comic-panel {
-      background: #fffaf3;
-      border-radius: 18px;
-      border: 1px solid rgba(148, 163, 184, 0.8);
-      padding: 10px 8px 10px;
-      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.16);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-    }
-
-    .comic-panel:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 18px 40px rgba(191, 87, 0, 0.4);
-      border-color: var(--burnt);
-      background: #ffedd5;
-    }
-
-    .comic-label {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: var(--muted);
-    }
-
-    .comic-emoji {
-      font-size: 2.4rem;
-    }
-
-    .comic-dots {
-      display: flex;
-      gap: 4px;
-      margin-top: 4px;
-    }
-
-    .comic-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: #d1d5db;
-    }
-
-    .comic-panel[data-scene="before"] .comic-dot:nth-child(1),
-    .comic-panel[data-scene="with"] .comic-dot:nth-child(2),
-    .comic-panel[data-scene="after"] .comic-dot:nth-child(3) {
-      background: var(--burnt);
-      box-shadow: 0 0 10px rgba(191, 87, 0, 0.7);
-    }
-
-    /* FLOW PATH */
-    .flow-path {
-      margin-top: 18px;
-      padding: 10px 10px 6px;
-      border-radius: 24px;
-      border: 1px dashed rgba(148, 163, 184, 0.9);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      background: #fffaf3;
-      box-shadow: 0 8px 22px rgba(15,23,42,0.15);
-    }
-
-    .flow-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      color: var(--muted);
-    }
-
-    .flow-track {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      position: relative;
-      padding: 4px 4px 6px;
-    }
-
-    .flow-line {
-      position: absolute;
-      left: 9%;
-      right: 9%;
-      top: 50%;
-      height: 2px;
-      background: linear-gradient(to right, #fb923c, #22c55e);
-      opacity: 0.6;
-    }
-
-    .flow-node {
-      position: relative;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: #fefce8;
-      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.9);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      cursor: pointer;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
-      z-index: 1;
-    }
-
-    .flow-node:hover {
-      transform: translateY(-4px) scale(1.05);
-      box-shadow: 0 0 18px rgba(191, 87, 0, 0.7);
-      background: #fffbeb;
-      border-color: var(--burnt);
-    }
-
-    .flow-node.active {
-      box-shadow: 0 0 20px rgba(34, 197, 94, 0.9);
-      background: radial-gradient(circle at top, #22c55e, #16a34a);
-      color: #ffffff;
-    }
-
-    .flow-tags {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: var(--muted);
-      padding: 0 4px;
-    }
-
-    /* EXTRA SECTION */
-    .extra-section {
-      max-width: 1200px;
-      margin: 0 auto 32px;
-      padding: 0 16px 32px;
-      display: grid;
-      grid-template-columns: 1.1fr 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 900px) {
-      .extra-section {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* MINI SCENARIO GRID (12 CARDS) */
-    .scenario-grid {
-      margin-top: 10px;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    @media (max-width: 900px) {
-      .scenario-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 600px) {
-      .scenario-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .scenario-card {
-      background: #fffaf3;
-      border-radius: 18px;
-      border: 1px solid rgba(148, 163, 184, 0.85);
-      padding: 10px 8px 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.18);
-      cursor: pointer;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-    }
-
-    .scenario-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 16px 40px rgba(191, 87, 0, 0.4);
-      border-color: var(--burnt);
-      background: #ffedd5;
-    }
-
-    .scenario-strip {
-      font-size: 1.6rem;
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .scenario-caption {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--muted);
-      text-align: center;
-    }
-
-    /* NETWORK SNAPSHOT */
-    .network-wrap {
-      margin-top: 10px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding-top: 4px;
-    }
-
-    .network {
-      width: 260px;
-      height: 260px;
-      border-radius: 24px;
-      background: #fffaf3;
-      border: 1px solid rgba(148, 163, 184, 0.9);
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      gap: 6px;
-      padding: 10px;
-      position: relative;
-      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2);
-    }
-
-    .network-node {
-      border-radius: 14px;
-      background: #fefce8;
-      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.95);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      font-size: 0.75rem;
-      text-align: center;
-      padding: 4px;
-      cursor: pointer;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
-      color: var(--muted);
-    }
-
-    .network-node strong {
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: #111827;
-    }
-
-    .network-node span {
-      font-size: 1.3rem;
-    }
-
-    .network-node.center {
-      background: radial-gradient(circle at top, #fb923c, var(--burnt));
-      box-shadow: 0 0 22px rgba(191, 87, 0, 0.95);
-      color: #ffffff;
-      border-color: transparent;
-    }
-
-    .network-node:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 0 22px rgba(59, 130, 246, 0.75);
-      background: #eff6ff;
-      border-color: #3b82f6;
-    }
-
-    .network-links {
-      position: absolute;
-      inset: 16px;
-      border-radius: 18px;
-      border: 1px dashed rgba(148, 163, 184, 0.7);
-      pointer-events: none;
-      opacity: 0.7;
-    }
-
-    .network-legend {
-      margin-top: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      justify-content: center;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--muted);
-    }
-
-    .network-chip {
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.8);
-      padding: 4px 8px;
-      background: #fffaf3;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      box-shadow: 0 6px 16px rgba(15,23,42,0.12);
-    }
-
-    footer {
-      text-align: center;
-      padding: 10px;
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Growth as a Recorder Player</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ---------------- GLOBAL ---------------- */
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #f9f6ef, #ffe7d2, #f7d4ad);
+    overflow: auto; /* allow scrolling */
+    color: #222;
+}
+
+/* UT burnt orange */
+:root {
+    --burnt: #BF5700;
+}
+
+/* ---------------- UT LOGO WATERMARK ---------------- */
+.ut-logo {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 900px;
+    opacity: 0.13;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* ---------------- FLOATING MUSIC NOTES ---------------- */
+.notes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.note {
+    position: absolute;
+    top: 110%;
+    font-size: 2.2rem;
+    color: rgba(0, 0, 0, 0.25);
+    animation: floatUp linear infinite;
+    user-select: none;
+}
+
+@keyframes floatUp {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(-150vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* note positions */
+.note:nth-child(1) { left: 3%; animation-duration: 16s; }
+.note:nth-child(2) { left: 8%; animation-duration: 19s; }
+.note:nth-child(3) { left: 12%; animation-duration: 13s; }
+.note:nth-child(4) { left: 18%; animation-duration: 17s; }
+.note:nth-child(5) { left: 25%; animation-duration: 14s; }
+.note:nth-child(6) { left: 32%; animation-duration: 22s; }
+.note:nth-child(7) { left: 38%; animation-duration: 11s; }
+.note:nth-child(8) { left: 45%; animation-duration: 18s; }
+.note:nth-child(9) { left: 52%; animation-duration: 20s; }
+.note:nth-child(10) { left: 58%; animation-duration: 15s; }
+.note:nth-child(11) { left: 63%; animation-duration: 21s; }
+.note:nth-child(12) { left: 68%; animation-duration: 12s; }
+.note:nth-child(13) { left: 72%; animation-duration: 17s; }
+.note:nth-child(14) { left: 77%; animation-duration: 23s; }
+.note:nth-child(15) { left: 82%; animation-duration: 19s; }
+.note:nth-child(16) { left: 87%; animation-duration: 14s; }
+.note:nth-child(17) { left: 90%; animation-duration: 24s; }
+.note:nth-child(18) { left: 15%; animation-duration: 26s; }
+.note:nth-child(19) { left: 28%; animation-duration: 16s; }
+.note:nth-child(20) { left: 41%; animation-duration: 13s; }
+.note:nth-child(21) { left: 54%; animation-duration: 22s; }
+.note:nth-child(22) { left: 67%; animation-duration: 20s; }
+.note:nth-child(23) { left: 79%; animation-duration: 18s; }
+.note:nth-child(24) { left: 93%; animation-duration: 25s; }
+
+/* ---------------- WAVES ---------------- */
+#waves {
+    position: fixed;
+    bottom: 0;
+    width: 200%;
+    z-index: 2;
+    opacity: 0.45;
+    animation: waveMove 14s linear infinite;
+}
+
+@keyframes waveMove {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+/* ---------------- SLIDES ---------------- */
+.slide {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 90%;
+    max-width: 900px;
+    padding: 50px 50px 40px;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.55);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 0 35px rgba(191, 87, 0, 0.35);
+    text-align: center;
+    display: none;
+    animation: fadeIn 0.8s ease-out;
+    z-index: 10;
+}
+
+.active {
+    display: block;
+}
+
+/* Make only Slide 3 wider */
+.wide-slide {
+    max-width: 1100px;
+}
+
+h1 {
+    color: var(--burnt);
+    font-size: 2.7rem;
+    margin-bottom: 10px;
+}
+
+h2,
+h3 {
+    color: var(--burnt);
+}
+
+.list {
+    max-width: 650px;
+    text-align: left;
+    margin: 0 auto 20px;
+    line-height: 1.8;
+    font-size: 1.15rem;
+}
+
+/* ---------------- VIDEO LAYOUT ---------------- */
+.video-box {
+    width: 100%;
+    max-width: 100%;
+    max-height: 60vh;
+    border-radius: 12px;
+    margin: 10px auto 5px;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.25);
+}
+
+.video-row {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.video-col {
+    flex: 1 1 260px;
+    max-width: 320px;
+}
+
+/* BUTTONS */
+.btn {
+    padding: 14px 30px;
+    background: var(--burnt);
+    border-radius: 10px;
+    color: white;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(191, 87, 0, 0.7);
+    margin: 20px 10px 0;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn:hover {
+    background: #a64c00;
+    transform: translateY(-3px);
+}
+
+.back {
+    background: #666;
+}
+
+.back:hover {
+    background: #444;
+}
+
+.slide-num {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin-top: 10px;
+}
+
+.caption {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 12px;
+}
+</style>
 </head>
 <body>
-<header>
-  <div class="ut-logo">
-    <div class="ut-logo-circle">
-      <span class="ut-longhorn-icon">🤘</span>
-    </div>
-    <div class="ut-logo-text">The University of Texas at Austin</div>
-  </div>
-  <p>UT Austin • Project 4 Visual</p>
-  <h1><span>AI</span> @ UT</h1>
-  <div class="tagline">Learn • Support • Lead</div>
-</header>
 
-<section class="layout">
-  <!-- LEFT: MAIN CLOUD + BUBBLES -->
-  <div class="panel">
-    <div class="panel-title">
-      <span>AI + Campus Vibes</span>
-      <div class="dot-row">
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
-      </div>
-    </div>
+<!-- UT LOGO -->
+<img class="ut-logo" src="https://upload.wikimedia.org/wikipedia/commons/8/8d/Texas_Longhorns_logo.svg">
 
-    <div class="cloud-wrapper">
-      <div class="cloud-circle" id="wordCloud">
-        <div class="cloud-label">Key Ideas</div>
+<!-- FLOATING NOTES -->
+<div class="notes">
+    <div class="note">♪</div><div class="note">♫</div><div class="note">♬</div><div class="note">♩</div>
+    <div class="note">♪</div><div class="note">♫</div><div class="note">♬</div><div class="note">♩</div>
+    <div class="note">♪</div><div class="note">♫</div><div class="note">♩</div><div class="note">♬</div>
+    <div class="note">♪</div><div class="note">♫</div><div class="note">♩</div><div class="note">♬</div>
+    <div class="note">♪</div><div class="note">♫</div><div class="note">♩</div><div class="note">♬</div>
+</div>
 
-        <!-- big center words -->
-        <span class="cloud-word cw-4" data-x="50" data-y="30">Access</span>
-        <span class="cloud-word cw-3" data-x="25" data-y="45">Support</span>
-        <span class="cloud-word cw-3" data-x="75" data-y="45">Equity</span>
-        <span class="cloud-word cw-3" data-x="50" data-y="63">Ethics</span>
+<!-- WAVES -->
+<svg id="waves" viewBox="0 0 1440 320">
+    <path fill="#BF5700" fill-opacity="0.4"
+        d="M0,64L48,74.7C96,85,192,107,288,133.3C384,160,480,192,576,192C672,192,768,160,864,122.7C960,85,1056,43,1152,42.7C1248,43,1344,85,1392,106.7L1440,128V320H0Z">
+    </path>
+</svg>
 
-        <!-- medium ring -->
-        <span class="cloud-word cw-2" data-x="18" data-y="28">Feedback</span>
-        <span class="cloud-word cw-2" data-x="82" data-y="28">Focus</span>
-        <span class="cloud-word cw-2" data-x="18" data-y="62">Future</span>
-        <span class="cloud-word cw-2" data-x="82" data-y="62">Clarity</span>
+<!-- ---------------- SLIDES ---------------- -->
 
-        <!-- small words spaced around -->
-        <span class="cloud-word cw-1" data-x="50" data-y="15">Policy</span>
-        <span class="cloud-word cw-1" data-x="12" data-y="40">Burnout</span>
-        <span class="cloud-word cw-1" data-x="88" data-y="40">Fairness</span>
-        <span class="cloud-word cw-1" data-x="16" data-y="75">Access Gap</span>
-        <span class="cloud-word cw-1" data-x="84" data-y="75">Data</span>
-        <span class="cloud-word cw-1" data-x="50" data-y="83">Confusion</span>
-      </div>
-    </div>
+<!-- Slide 1 -->
+<div class="slide active" id="slide1">
+    <h1>My Growth as a Recorder Player</h1>
+    <h2>From No Experience to Semi Better</h2>
+    <p>By: Alvin Moreno</p>
 
-    <div class="hint">
-      Bigger words = bigger AI issues on campus. Hover to spotlight them.
-    </div>
+    <button class="btn" onclick="nextSlide()">Start Presentation</button>
+    <p class="slide-num">Slide 1 of 6</p>
+</div>
 
-    <div class="toggle-bar">
-      <button class="toggle-btn active" data-mode="now">Now</button>
-      <button class="toggle-btn" data-mode="program">Program</button>
-    </div>
+<!-- Slide 2 -->
+<div class="slide" id="slide2">
+    <h1>My Musical Background</h1>
 
-    <div class="bubbles" id="bubbleArea"></div>
+    <ul class="list">
+        <li>I never played any instrument before this class</li>
+        <li>I thought music was simple and that you just play the notes</li>
+        <li>This class showed me music is much more complex than I expected</li>
+        <li>I had to learn everything from scratch: rhythm, breath control, notes, and hand positions</li>
+    </ul>
 
-    <div class="hint">
-      Switch NOW / PROGRAM to see stress shrink and support grow.
-    </div>
-  </div>
+    <button class="btn back" onclick="prevSlide()">Back</button>
+    <button class="btn" onclick="nextSlide()">Next</button>
+    <p class="slide-num">Slide 2 of 6</p>
+</div>
 
-  <!-- RIGHT: CAMPUS MAP PANEL WITH EXPLAINED NODES -->
-  <div class="panel">
-    <div class="panel-title">
-      <span>Campus Map</span>
-      <div class="dot-row">
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
-      </div>
-    </div>
+<!-- Slide 3 (Side-by-Side Videos + Wide Layout) -->
+<div class="slide wide-slide" id="slide3">
+    <h1>Video Evidence</h1>
 
-    <div class="mood-strip" id="moodStrip">
-      <div class="mood-label">Mood Line</div>
-      <div class="mood-timeline">
-        <div class="mood-dot active" data-mood="stress">😵</div>
-        <div class="mood-dot" data-mood="confused">😕</div>
-        <div class="mood-dot" data-mood="neutral">😐</div>
-        <div class="mood-dot" data-mood="curious">🤔</div>
-        <div class="mood-dot" data-mood="supported">😊</div>
-        <div class="mood-dot" data-mood="ready">🚀</div>
-      </div>
-      <div class="mood-tag" id="moodTag">Now</div>
-    </div>
-
-    <div class="hint">
-      Click an emoji to show how AI feels now vs with the program.
-    </div>
-
-    <div class="tile-grid">
-      <div class="tile">
-        <div class="tile-emoji">📚</div>
-        <div>Study Boost</div>
-      </div>
-      <div class="tile">
-        <div class="tile-emoji">⏱️</div>
-        <div>Time Saved</div>
-      </div>
-      <div class="tile">
-        <div class="tile-emoji">🧠</div>
-        <div>Thinking, Not Copy</div>
-      </div>
-      <div class="tile">
-        <div class="tile-emoji">🦾</div>
-        <div>Assist, Not Replace</div>
-      </div>
-      <div class="tile">
-        <div class="tile-emoji">🌐</div>
-        <div>Equal Access</div>
-      </div>
-      <div class="tile">
-        <div class="tile-emoji">📊</div>
-        <div>Early Signals</div>
-      </div>
-    </div>
-
-    <div class="campus-circle-wrap">
-      <div class="campus-circle">
-        <div class="campus-ring"></div>
-
-        <div class="campus-center">
-          <span>🤖</span>
-          <div class="campus-center-label">AI Hub</div>
+    <div class="video-row">
+        <div class="video-col">
+            <h3>Early Semester</h3>
+            <video controls class="video-box">
+                <source src="IMG_7878.MP4" type="video/mp4">
+            </video>
+            <p class="caption">This clip shows how I sounded near the beginning of the semester.</p>
         </div>
 
-        <div class="campus-node" data-spot="classes">
-          <span>🏫</span>
-          <div class="campus-node-label">Smart Syllabi & Quizzes</div>
+        <div class="video-col">
+            <h3>Later Semester</h3>
+            <video controls class="video-box">
+                <source src="IMG_9286.MP4" type="video/mp4">
+            </video>
+            <p class="caption">This clip shows my sound after learning and practicing through the course.</p>
         </div>
-
-        <div class="campus-node" data-spot="library">
-          <span>📖</span>
-          <div class="campus-node-label">AI Research Helper</div>
-        </div>
-
-        <div class="campus-node" data-spot="advising">
-          <span>💬</span>
-          <div class="campus-node-label">Advising Chatbot Q&A</div>
-        </div>
-      </div>
     </div>
 
-    <div class="hint">
-      Circle map: AI Hub in the middle powering smarter classes, faster research, and quicker advising answers.
-    </div>
-  </div>
-</section>
+    <button class="btn back" onclick="prevSlide()">Back</button>
+    <button class="btn" onclick="nextSlide()">Next</button>
+    <p class="slide-num">Slide 3 of 6</p>
+</div>
 
-<section class="legend-band">
-  <div class="legend-row">
-    <div class="legend-pill">
-      <div class="legend-dot orange"></div>
-      <span>Program = More Support</span>
-    </div>
-    <div class="legend-pill">
-      <div class="legend-dot green"></div>
-      <span>Green Bubbles = Big Wins</span>
-    </div>
-    <div class="legend-pill">
-      <div class="legend-dot blue"></div>
-      <span>Blue = Campus Spots</span>
-    </div>
-    <div class="legend-pill">
-      <div class="legend-dot pink"></div>
-      <span>Emoji Line = Feelings</span>
-    </div>
-  </div>
-</section>
+<!-- Slide 4 -->
+<div class="slide" id="slide4">
+    <h1>My Growth Over the Semester</h1>
 
-<section class="visual-section">
-  <div class="panel-title" style="margin-bottom: 4px;">
-    <span>Mini Comic • AI On Campus</span>
-    <div class="dot-row">
-      <div class="dot"></div>
-      <div class="dot"></div>
-    </div>
-  </div>
+    <ul class="list">
+        <li>I can play cleaner and smoother sounds with fewer squeaks</li>
+        <li>My breath control improved — I can hold notes longer and stay steady</li>
+        <li>My hand placement is more accurate and consistent</li>
+        <li>My tonguing technique improved for clearer note beginnings</li>
+        <li>My confidence increased and I feel more comfortable performing in front of others</li>
+    </ul>
 
-  <div class="comic-row">
-    <div class="comic-panel" data-scene="before">
-      <div class="comic-label">Before</div>
-      <div class="comic-emoji">😵‍💫</div>
-      <div class="comic-dots">
-        <div class="comic-dot"></div>
-        <div class="comic-dot"></div>
-        <div class="comic-dot"></div>
-      </div>
-    </div>
-    <div class="comic-panel" data-scene="with">
-      <div class="comic-label">With AI</div>
-      <div class="comic-emoji">🤝</div>
-      <div class="comic-dots">
-        <div class="comic-dot"></div>
-        <div class="comic-dot"></div>
-        <div class="comic-dot"></div>
-      </div>
-    </div>
-    <div class="comic-panel" data-scene="after">
-      <div class="comic-label">After</div>
-      <div class="comic-emoji">🚀</div>
-      <div class="comic-dots">
-        <div class="comic-dot"></div>
-        <div class="comic-dot"></div>
-        <div class="comic-dot"></div>
-      </div>
-    </div>
-  </div>
+    <button class="btn back" onclick="prevSlide()">Back</button>
+    <button class="btn" onclick="nextSlide()">Next</button>
+    <p class="slide-num">Slide 4 of 6</p>
+</div>
 
-  <div class="hint">
-    Three-panel comic: how a student feels before, with, and after AI support.
-  </div>
+<!-- Slide 5 (Music → Coding Connection) -->
+<div class="slide" id="slide5">
+    <h1>How Music Helped My Coding</h1>
 
-  <div class="flow-path">
-    <div class="flow-label">Journey Snapshot</div>
-    <div class="flow-track">
-      <div class="flow-line"></div>
-      <div class="flow-node active" data-step="student">🧑‍🎓</div>
-      <div class="flow-node" data-step="ai">🤖</div>
-      <div class="flow-node" data-step="support">🙌</div>
-      <div class="flow-node" data-step="success">🎓</div>
-    </div>
-    <div class="flow-tags">
-      <span>Student</span>
-      <span>AI</span>
-      <span>Support</span>
-      <span>Success</span>
-    </div>
-  </div>
+    <p style="max-width:650px;margin:0 auto 20px;font-size:1.1rem;">
+        Learning recorder didn’t just help me with music — it also helped me grow as a programmer.
+        Music trained me to slow down, think step-by-step, and be patient when fixing mistakes.  
+        These were the same skills I used when creating my coding projects this semester.
+    </p>
 
-  <div class="hint">
-    Tap each icon to follow the path: student → AI → support → graduation.
-  </div>
-</section>
+    <ul class="list">
+        <li>Breaking songs into small parts helped me break code problems into smaller steps.</li>
+        <li>Practicing rhythms improved my ability to follow sequences and logic in programming.</li>
+        <li>Fixing squeaks and errors taught me persistence when debugging code.</li>
+        <li>Performing boosted my confidence in presenting and explaining my projects.</li>
+    </ul>
 
-<section class="extra-section">
-  <!-- LEFT: EXPANDED MINI SCENARIO GRID (12 CARDS) -->
-  <div class="panel">
-    <div class="panel-title">
-      <span>Mini Scenarios</span>
-      <div class="dot-row">
-        <div class="dot"></div>
-        <div class="dot"></div>
-      </div>
+    <p style="margin-top:15px;font-weight:600;">Here are two coding projects I created this semester:</p>
+
+    <div>
+        <a href="MHHP.html" class="btn" target="_blank">MHHP Project</a>
+        <a href="Recorder.html" class="btn" target="_blank">Recorder Project</a>
     </div>
 
-    <div class="scenario-grid">
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>🧑‍🎓</span><span>📚</span><span>🤖</span>
-        </div>
-        <div class="scenario-caption">Late-night study buddy</div>
-      </div>
+    <button class="btn back" onclick="prevSlide()">Back</button>
+    <button class="btn" onclick="nextSlide()">Next</button>
+    <p class="slide-num">Slide 5 of 6</p>
+</div>
 
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>🧑‍🏫</span><span>🧩</span><span>💻</span>
-        </div>
-        <div class="scenario-caption">Prof builds creative lesson</div>
-      </div>
+<!-- Slide 6 (Updated Conclusion) -->
+<div class="slide" id="slide6">
+    <h1>Conclusion</h1>
 
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>♿</span><span>🌐</span><span>🤖</span>
-        </div>
-        <div class="scenario-caption">Accessibility boost</div>
-      </div>
+    <p style="max-width:650px;margin:0 auto 20px;font-size:1.1rem;">
+        This class changed how I think about both music and coding.  
+        Starting as a complete beginner, I learned how much focus, discipline, and patience it takes 
+        to improve — skills that carried over directly into my programming work this semester.
+    </p>
 
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>🧑‍🎓</span><span>📉</span><span>📊</span><span>🙌</span>
-        </div>
-        <div class="scenario-caption">Early help before failing</div>
-      </div>
+    <ul class="list">
+        <li>Learning recorder from scratch taught me how to learn new skills step-by-step.</li>
+        <li>Practicing rhythm and timing strengthened my ability to think in patterns, just like coding.</li>
+        <li>Correcting mistakes in music helped me stay patient when debugging programs.</li>
+        <li>Performing gave me more confidence in sharing and explaining my coding projects.</li>
+        <li>This class showed me that growth in any skill — music or programming — comes from consistent effort.</li>
+    </ul>
 
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>🧑‍💼</span><span>🧠</span><span>🤖</span>
-        </div>
-        <div class="scenario-caption">Career prep with AI tools</div>
-      </div>
+    <p style="margin-top:15px;">Thank you for listening</p>
 
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>👥</span><span>💬</span><span>🤖</span>
-        </div>
-        <div class="scenario-caption">Group project organizer</div>
-      </div>
+    <button class="btn back" onclick="prevSlide()">Back</button>
+    <p class="slide-num">Slide 6 of 6</p>
+</div>
 
-      <!-- 6 new mini comics -->
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>🧑‍🎓</span><span>📝</span><span>🤖</span>
-        </div>
-        <div class="scenario-caption">Outline helper for essays</div>
-      </div>
-
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>🌎</span><span>🔁</span><span>🤖</span>
-        </div>
-        <div class="scenario-caption">Translation for global students</div>
-      </div>
-
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>🧪</span><span>🧬</span><span>💻</span>
-        </div>
-        <div class="scenario-caption">Virtual lab simulations</div>
-      </div>
-
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>📆</span><span>⚖️</span><span>🤖</span>
-        </div>
-        <div class="scenario-caption">Schedule and workload balance</div>
-      </div>
-
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>📊</span><span>🧑‍🏫</span><span>🧑‍🎓</span>
-        </div>
-        <div class="scenario-caption">Dashboard for at-risk students</div>
-      </div>
-
-      <div class="scenario-card">
-        <div class="scenario-strip">
-          <span>🎧</span><span>📖</span><span>🤖</span>
-        </div>
-        <div class="scenario-caption">Audio notes for long readings</div>
-      </div>
-    </div>
-
-    <div class="hint">
-      Each tile = tiny comic of AI helping in real campus moments.
-    </div>
-  </div>
-
-  <!-- RIGHT: AI NETWORK SNAPSHOT -->
-  <div class="panel">
-    <div class="panel-title">
-      <span>AI Network Snapshot</span>
-      <div class="dot-row">
-        <div class="dot"></div>
-        <div class="dot"></div>
-      </div>
-    </div>
-
-    <div class="network-wrap">
-      <div class="network">
-        <div class="network-links"></div>
-
-        <div class="network-node">
-          <span>📚</span>
-          <strong>Courses</strong>
-        </div>
-        <div class="network-node">
-          <span>🧑‍🏫</span>
-          <strong>Faculty</strong>
-        </div>
-        <div class="network-node">
-          <span>📝</span>
-          <strong>Assignments</strong>
-        </div>
-        <div class="network-node">
-          <span>📊</span>
-          <strong>Data</strong>
-        </div>
-        <div class="network-node center">
-          <span>🤖</span>
-          <strong>AI Hub</strong>
-        </div>
-        <div class="network-node">
-          <span>🛡️</span>
-          <strong>Policy</strong>
-        </div>
-        <div class="network-node">
-          <span>🧑‍🎓</span>
-          <strong>Students</strong>
-        </div>
-        <div class="network-node">
-          <span>♿</span>
-          <strong>Access</strong>
-        </div>
-        <div class="network-node">
-          <span>📣</span>
-          <strong>Support</strong>
-        </div>
-      </div>
-    </div>
-
-    <div class="network-legend">
-      <div class="network-chip">
-        <span>🤖</span> Center = AI Integration Program
-      </div>
-      <div class="network-chip">
-        <span>⬜</span> Each box = one campus system it connects
-      </div>
-    </div>
-
-    <div class="hint">
-      Hover around the grid: AI sits in the middle, connecting courses, people, rules, data, and support.
-    </div>
-  </div>
-</section>
-
-<footer>
-  Visual argument: AI Integration Program for UT Austin • Project 4
-</footer>
-
+<!-- SLIDE LOGIC -->
 <script>
-  // place cloud words based on data-x / data-y
-  window.addEventListener("load", () => {
-    const cloud = document.getElementById("wordCloud");
-    const words = cloud.querySelectorAll(".cloud-word");
-    words.forEach(word => {
-      const x = word.getAttribute("data-x");
-      const y = word.getAttribute("data-y");
-      word.style.left = x + "%";
-      word.style.top = y + "%";
-    });
-  });
-
-  // BUBBLES: "Now" vs "Program"
-  const bubbleArea = document.getElementById("bubbleArea");
-  const toggleBtns = document.querySelectorAll(".toggle-btn");
-
-  const bubbleData = {
-    now: [
-      { size: "big", label: "Stress", color: "#ef4444" },
-      { size: "med", label: "Confusion", color: "#f97316" },
-      { size: "small", label: "Support", color: "#22c55e" }
-    ],
-    program: [
-      { size: "big", label: "Support", color: "#22c55e" },
-      { size: "med", label: "Access", color: "#3b82f6" },
-      { size: "small", label: "Stress↓", color: "#f97316" }
-    ]
-  };
-
-  function renderBubbles(mode) {
-    bubbleArea.innerHTML = "";
-    bubbleData[mode].forEach((b) => {
-      const wrap = document.createElement("div");
-      wrap.className = `bubble ${b.size}`;
-
-      const circle = document.createElement("div");
-      circle.className = "bubble-circle";
-      circle.style.boxShadow = `0 0 0 1px ${b.color}`;
-      circle.innerHTML = `<span>${b.label}</span>`;
-
-      const label = document.createElement("div");
-      label.className = "bubble-label";
-      label.textContent = mode === "now" ? "Now" : "Program";
-
-      wrap.appendChild(circle);
-      wrap.appendChild(label);
-      bubbleArea.appendChild(wrap);
-    });
-  }
-
-  toggleBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      toggleBtns.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      const mode = btn.getAttribute("data-mode");
-      renderBubbles(mode);
-    });
-  });
-
-  renderBubbles("now");
-
-  // MOOD STRIP
-  const moodDots = document.querySelectorAll(".mood-dot");
-  const moodTag = document.getElementById("moodTag");
-
-  const moodMap = {
-    stress: "Now",
-    confused: "Unsure",
-    neutral: "Mixed",
-    curious: "Curious",
-    supported: "Supported",
-    ready: "Program"
-  };
-
-  moodDots.forEach((dot) => {
-    dot.addEventListener("click", () => {
-      moodDots.forEach((d) => d.classList.remove("active"));
-      dot.classList.add("active");
-      const mood = dot.getAttribute("data-mood");
-      moodTag.textContent = moodMap[mood];
-    });
-  });
-
-  // FLOW PATH: tap through steps
-  const flowNodes = document.querySelectorAll(".flow-node");
-  flowNodes.forEach((node) => {
-    node.addEventListener("click", () => {
-      flowNodes.forEach((n) => n.classList.remove("active"));
-      node.classList.add("active");
-    });
-  });
-
-  // COMIC PANELS: small wobble on click
-  const comicPanels = document.querySelectorAll(".comic-panel");
-  comicPanels.forEach((panel) => {
-    panel.addEventListener("click", () => {
-      panel.style.transform = "translateY(-4px) scale(1.02)";
-      setTimeout(() => {
-        panel.style.transform = "";
-      }, 180);
-    });
-  });
-
-  // Scenario cards: tiny bounce
-  const scenarioCards = document.querySelectorAll(".scenario-card");
-  scenarioCards.forEach((card) => {
-    card.addEventListener("click", () => {
-      card.style.transform = "translateY(-4px) scale(1.02)";
-      setTimeout(() => {
-        card.style.transform = "";
-      }, 180);
-    });
-  });
+let current = 1;
+function showSlide(n) {
+    document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+    document.getElementById("slide" + n).classList.add('active');
+}
+function nextSlide() {
+    current++;
+    if (current > 6) current = 6;
+    showSlide(current);
+}
+function prevSlide() {
+    current--;
+    if (current < 1) current = 1;
+    showSlide(current);
+}
 </script>
+
 </body>
 </html>
